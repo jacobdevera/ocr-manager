@@ -16,7 +16,6 @@ import android.widget.TextView;
 import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
@@ -32,8 +31,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.floatingActionButton);
         fab.setOnClickListener(this);
         mHelper = new CaptureDbHelper(this);
-        getCaptures();
+        updateCaptures();
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateCaptures();
+    }
+
 
     private class CaptureViewHolder
             extends RecyclerView.ViewHolder
@@ -49,11 +55,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Intent intent = new Intent(v.getContext(), CaptureActivity.class);
             intent.putExtra("text", captureList.get(getAdapterPosition()));
             startActivity(intent);
-            getCaptures();
         }
     }
 
-    private void getCaptures () {
+    private void updateCaptures() {
         captureList = new ArrayList<>();
         SQLiteDatabase db = mHelper.getReadableDatabase();
         Cursor cursor = db.query(CaptureContract.CaptureEntry.TABLE,
