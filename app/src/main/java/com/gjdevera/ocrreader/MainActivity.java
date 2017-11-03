@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -88,7 +89,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 @Override
                 public void onBindViewHolder(CaptureViewHolder vh, int position) {
                     TextView tv = (TextView) vh.itemView.findViewById(R.id.text1);
-                    tv.setText(captureList.get(position));
+                    String s = captureList.get(position);
+                    s = s.replace("\n"," ");
+                    s = s.substring(0, Math.min(s.length(), 50));
+                    tv.setText(s);
                     tv = (TextView) vh.itemView.findViewById(R.id.text2);
                     tv.setText("" + position);
                 }
@@ -98,9 +102,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     return captureList.size(); // db size
                 }
             };
-            /*DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(mRecyclerView.getContext(),
-                    mLayoutManager.getOrientation());*
-            mRecyclerView.addItemDecoration(dividerItemDecoration);*/
+            DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(mRecyclerView.getContext(),
+                    mLayoutManager.getOrientation());
+            mRecyclerView.addItemDecoration(dividerItemDecoration);
             mRecyclerView.setAdapter(mAdapter);
         } else {
             mAdapter = mRecyclerView.getAdapter();
