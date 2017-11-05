@@ -347,6 +347,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                 startActivity(new Intent()
                         .setClass(getApplicationContext(), CaptureActivity.class)
                         .putExtra("text", text.getValue())
+                        .putExtra("newCapture", true)
                 );
                 finish();
                 /*Log.d(TAG, "text data is being spoken! " + text.getValue());

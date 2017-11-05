@@ -14,15 +14,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.gjdevera.ocrreader.db.Capture;
 import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.TimeZone;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private CaptureDbHelper mHelper;
     private LinearLayoutManager mLayoutManager;
-    private ArrayList<String> captureList;
+    private ArrayList<Capture> captureList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +45,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         updateCaptures();
     }
 
-
     private class CaptureViewHolder
             extends RecyclerView.ViewHolder
             implements View.OnClickListener {
@@ -54,7 +57,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onClick(View v) {
             Intent intent = new Intent(v.getContext(), CaptureActivity.class);
-            intent.putExtra("text", captureList.get(getAdapterPosition()));
+            Capture capture = captureList.get(getAdapterPosition());
+            intent.putExtra("text", capture.getText());
+            intent.putExtra("id", capture.getId());
             startActivity(intent);
         }
     }
@@ -63,11 +68,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         captureList = new ArrayList<>();
         SQLiteDatabase db = mHelper.getReadableDatabase();
         Cursor cursor = db.query(CaptureContract.CaptureEntry.TABLE,
-                new String[]{CaptureContract.CaptureEntry._ID, CaptureContract.CaptureEntry.COL_TEXT},
+                new String[]{CaptureContract.CaptureEntry._ID,
+                        CaptureContract.CaptureEntry.COL_TEXT,
+                        CaptureContract.CaptureEntry.COL_CREATED},
                 null, null, null, null, null);
         while (cursor.moveToNext()) {
-            int idx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_TEXT);
-            captureList.add(cursor.getString(idx));
+            int textIdx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_TEXT);
+            int idIdx =  cursor.getColumnIndex(CaptureContract.CaptureEntry._ID);
+            int createdIdx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_CREATED);
+            Capture capture = new Capture(cursor.getLong(idIdx),
+                    cursor.getString(textIdx), cursor.getString(createdIdx));
+            captureList.add(capture);
         }
 
         RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
@@ -89,12 +100,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 @Override
                 public void onBindViewHolder(CaptureViewHolder vh, int position) {
                     TextView tv = (TextView) vh.itemView.findViewById(R.id.text1);
-                    String s = captureList.get(position);
+                    Capture capture = captureList.get(position);
+                    String s = capture.getText();
                     s = s.replace("\n"," ");
                     s = s.substring(0, Math.min(s.length(), 50));
                     tv.setText(s);
                     tv = (TextView) vh.itemView.findViewById(R.id.text2);
-                    tv.setText("" + position);
+                    tv.setText(getDate(capture.getCreated()));
                 }
 
                 @Override
@@ -110,9 +122,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mAdapter = mRecyclerView.getAdapter();
             mAdapter.notifyDataSetChanged();
         }
-
         cursor.close();
         db.close();
+    }
+
+    // attempt to format UTC date to user's local time
+    private String getDate(String date) {
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date value = formatter.parse(date);
+
+            SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd-yyyy HH:mm");
+            dateFormatter.setTimeZone(TimeZone.getDefault());
+            date = dateFormatter.format(value);
+        }
+        catch (Exception e) {
+            date = "00-00-0000 00:00";
+        }
+        return date;
     }
 
     @Override

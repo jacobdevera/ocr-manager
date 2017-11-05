@@ -16,6 +16,8 @@ import com.gjdevera.ocrreader.db.CaptureDbHelper;
 public class CaptureActivity extends AppCompatActivity {
     private static final String TAG = "CaptureActivity";
     private CaptureDbHelper mHelper;
+    private boolean newCapture;
+    private long id;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,6 +27,10 @@ public class CaptureActivity extends AppCompatActivity {
         mHelper = new CaptureDbHelper(this);
         Intent intent = getIntent();
         String result = intent.getStringExtra("text");
+        newCapture = intent.getBooleanExtra("newCapture", false);
+        if (!newCapture) {
+            id = intent.getLongExtra("id", -1);
+        }
         EditText captureEditText = (EditText) findViewById(R.id.editText);
         captureEditText.setText(result);
     }
@@ -45,10 +51,16 @@ public class CaptureActivity extends AppCompatActivity {
                 SQLiteDatabase db = mHelper.getWritableDatabase();
                 ContentValues values = new ContentValues();
                 values.put(CaptureContract.CaptureEntry.COL_TEXT, text);
-                db.insertWithOnConflict(CaptureContract.CaptureEntry.TABLE,
-                        null,
-                        values,
-                        SQLiteDatabase.CONFLICT_REPLACE);
+                if (newCapture) { // new capture
+                    db.insertWithOnConflict(CaptureContract.CaptureEntry.TABLE,
+                            null,
+                            values,
+                            SQLiteDatabase.CONFLICT_REPLACE);
+                } else { // update existing capture
+                    String selection = CaptureContract.CaptureEntry._ID + " = ?";
+                    String[] selectionArgs = { Long.toString(id) };
+                    db.update(CaptureContract.CaptureEntry.TABLE, values, selection, selectionArgs);
+                }
                 db.close();
                 finish();
                 return true;

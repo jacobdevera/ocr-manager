@@ -13,7 +13,8 @@ public class CaptureDbHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         String createTable = "CREATE TABLE " + CaptureContract.CaptureEntry.TABLE + " ( " +
                 CaptureContract.CaptureEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                CaptureContract.CaptureEntry.COL_TEXT + " TEXT NOT NULL);";
+                CaptureContract.CaptureEntry.COL_TEXT + " TEXT NOT NULL, " +
+                CaptureContract.CaptureEntry.COL_CREATED + " DATETIME DEFAULT CURRENT_TIMESTAMP);";
 
         db.execSQL(createTable);
     }
