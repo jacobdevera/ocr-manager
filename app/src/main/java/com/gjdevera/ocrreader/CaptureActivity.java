@@ -37,7 +37,7 @@ public class CaptureActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.capture_menu, menu);
+        getMenuInflater().inflate(R.menu.menu_capture, menu);
         return super.onCreateOptionsMenu(menu);
     }
 

@@ -9,24 +9,27 @@ import android.os.Bundle;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.view.LayoutInflater;
+import android.view.ActionMode;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import com.gjdevera.ocrreader.db.Capture;
 import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.TimeZone;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements ActionMode.Callback {
     private CaptureDbHelper mHelper;
-    private LinearLayoutManager mLayoutManager;
-    private ArrayList<Capture> captureList;
+    private List<Capture> captureList;
+    private ActionMode actionMode;
+    private CaptureViewAdapter mAdapter;
+    private boolean isMultiSelect;
+    private List<Long> selectedIds;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,34 +37,60 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
         final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.floatingActionButton);
-        fab.setOnClickListener(this);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent().setClass(getApplicationContext(), OcrCaptureActivity.class));
+            }
+        });
         mHelper = new CaptureDbHelper(this);
+        isMultiSelect = false;
+        selectedIds = new ArrayList<>();
+
+        LinearLayoutManager mLayoutManager = new LinearLayoutManager(this);
+        RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        mRecyclerView.setLayoutManager(mLayoutManager);
         updateCaptures();
+
+        mAdapter = new CaptureViewAdapter(this, captureList);
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(mRecyclerView.getContext(),
+                mLayoutManager.getOrientation());
+        mRecyclerView.addItemDecoration(dividerItemDecoration);
+        mRecyclerView.setAdapter(mAdapter);
+
+        mRecyclerView.addOnItemTouchListener(new RecyclerItemTouchListener(this, mRecyclerView, new RecyclerItemTouchListener.OnItemClickListener() {
+            @Override
+            public void onItemClick(View view, int position) {
+                if (isMultiSelect){
+                    //if multiple selection is enabled then select item on single click else perform normal click on item
+                    multiSelect(position);
+                } else {
+                    Intent intent = new Intent(getApplicationContext(), CaptureActivity.class);
+                    Capture capture = captureList.get(position);
+                    intent.putExtra("text", capture.getText());
+                    intent.putExtra("id", capture.getId());
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onItemLongClick(View view, int position) {
+                if (!isMultiSelect){
+                    selectedIds = new ArrayList<>();
+                    isMultiSelect = true;
+                    if (actionMode == null){
+                        actionMode = startActionMode(MainActivity.this); //show ActionMode.
+                    }
+                }
+                multiSelect(position);
+            }
+        }));
     }
 
     @Override
     public void onResume() {
         super.onResume();
         updateCaptures();
-    }
-
-    private class CaptureViewHolder
-            extends RecyclerView.ViewHolder
-            implements View.OnClickListener {
-
-        private CaptureViewHolder(View v) {
-            super(v);
-            v.setOnClickListener(this);
-        }
-
-        @Override
-        public void onClick(View v) {
-            Intent intent = new Intent(v.getContext(), CaptureActivity.class);
-            Capture capture = captureList.get(getAdapterPosition());
-            intent.putExtra("text", capture.getText());
-            intent.putExtra("id", capture.getId());
-            startActivity(intent);
-        }
     }
 
     private void updateCaptures() {
@@ -80,71 +109,65 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     cursor.getString(textIdx), cursor.getString(createdIdx));
             captureList.add(capture);
         }
-
-        RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-        RecyclerView.Adapter<CaptureViewHolder> mAdapter;
-        if (mRecyclerView.getLayoutManager() == null) {
-            mLayoutManager = new LinearLayoutManager(this);
-            mRecyclerView.setLayoutManager(mLayoutManager);
-            mAdapter = new RecyclerView.Adapter<CaptureViewHolder>() {
-
-                @Override
-                public CaptureViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-                    View v = LayoutInflater.from(parent.getContext()).inflate(
-                            R.layout.capture_row,
-                            parent,
-                            false);
-                    return new CaptureViewHolder(v);
-                }
-
-                @Override
-                public void onBindViewHolder(CaptureViewHolder vh, int position) {
-                    TextView tv = (TextView) vh.itemView.findViewById(R.id.text1);
-                    Capture capture = captureList.get(position);
-                    String s = capture.getText();
-                    s = s.replace("\n"," ");
-                    s = s.substring(0, Math.min(s.length(), 50));
-                    tv.setText(s);
-                    tv = (TextView) vh.itemView.findViewById(R.id.text2);
-                    tv.setText(getDate(capture.getCreated()));
-                }
-
-                @Override
-                public int getItemCount() {
-                    return captureList.size(); // db size
-                }
-            };
-            DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(mRecyclerView.getContext(),
-                    mLayoutManager.getOrientation());
-            mRecyclerView.addItemDecoration(dividerItemDecoration);
-            mRecyclerView.setAdapter(mAdapter);
-        } else {
-            mAdapter = mRecyclerView.getAdapter();
+        if (mAdapter != null) {
             mAdapter.notifyDataSetChanged();
         }
         cursor.close();
         db.close();
     }
 
-    // attempt to format UTC date to user's local time
-    private String getDate(String date) {
-        try {
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
-            Date value = formatter.parse(date);
-
-            SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd-yyyy HH:mm");
-            dateFormatter.setTimeZone(TimeZone.getDefault());
-            date = dateFormatter.format(value);
+    private void multiSelect(int position) {
+        Capture capture = captureList.get(position);
+        if (capture != null){
+            if (actionMode != null) {
+                if (selectedIds.contains(capture.getId()))
+                    selectedIds.remove(Long.valueOf(capture.getId()));
+                else
+                    selectedIds.add(capture.getId());
+                if (selectedIds.size() > 0)
+                    actionMode.setTitle(String.valueOf(selectedIds.size())); // show selected item count on action mode
+                else {
+                    actionMode.setTitle(""); // remove item count from action mode
+                    actionMode.finish(); // hide action mode
+                }
+                mAdapter.setSelectedIds(selectedIds);
+            }
         }
-        catch (Exception e) {
-            date = "00-00-0000 00:00";
-        }
-        return date;
     }
 
     @Override
-    public void onClick(View v) {
-        startActivity(new Intent().setClass(getApplicationContext(), OcrCaptureActivity.class));
+    public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+        MenuInflater inflater = mode.getMenuInflater();
+        inflater.inflate(R.menu.menu_select, menu);
+        return true;
     }
+
+    @Override
+    public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+        return false;
+    }
+
+    @Override
+    public boolean onActionItemClicked(ActionMode mode, MenuItem menuItem) {
+        switch (menuItem.getItemId()){
+            case R.id.action_delete:
+                StringBuilder stringBuilder = new StringBuilder();
+                for (Capture data : captureList) {
+                    if (selectedIds.contains(data.getId()))
+                        stringBuilder.append("\n").append(data.getText());
+                }
+                Toast.makeText(this, "Selected items are :" + stringBuilder.toString(), Toast.LENGTH_SHORT).show();
+                return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onDestroyActionMode(ActionMode mode) {
+        actionMode = null;
+        isMultiSelect = false;
+        selectedIds = new ArrayList<>();
+        mAdapter.setSelectedIds(new ArrayList<Long>());
+    }
+
 }
