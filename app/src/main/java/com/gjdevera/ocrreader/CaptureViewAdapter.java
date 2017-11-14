@@ -78,17 +78,7 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
         private CaptureViewHolder(View v) {
             super(v);
             rootView = v.findViewById(R.id.root_view);
-            // v.setOnClickListener(this);
         }
-        /*
-        @Override
-        public void onClick(View v) {
-            Intent intent = new Intent(v.getContext(), CaptureActivity.class);
-            Capture capture = captureList.get(getAdapterPosition());
-            intent.putExtra("text", capture.getText());
-            intent.putExtra("id", capture.getId());
-            context.startActivity(intent);
-        }*/
     }
 
     // attempt to format UTC date to user's local time

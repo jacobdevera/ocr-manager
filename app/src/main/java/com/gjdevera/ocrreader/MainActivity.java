@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -22,8 +24,10 @@ import com.gjdevera.ocrreader.db.CaptureDbHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 public class MainActivity extends AppCompatActivity implements ActionMode.Callback {
+    private static final String TAG = "MainActivity";
     private CaptureDbHelper mHelper;
     private List<Capture> captureList;
     private ActionMode actionMode;
@@ -50,21 +54,19 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(this);
         RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         mRecyclerView.setLayoutManager(mLayoutManager);
-        updateCaptures();
-
+        captureList = new ArrayList<>();
         mAdapter = new CaptureViewAdapter(this, captureList);
         DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(mRecyclerView.getContext(),
                 mLayoutManager.getOrientation());
         mRecyclerView.addItemDecoration(dividerItemDecoration);
         mRecyclerView.setAdapter(mAdapter);
-
+        updateCaptures();
         mRecyclerView.addOnItemTouchListener(new RecyclerItemTouchListener(this, mRecyclerView, new RecyclerItemTouchListener.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
-                if (isMultiSelect){
-                    //if multiple selection is enabled then select item on single click else perform normal click on item
+                if (isMultiSelect){ // if selecting multiple items
                     multiSelect(position);
-                } else {
+                } else { // open capture normally
                     Intent intent = new Intent(getApplicationContext(), CaptureActivity.class);
                     Capture capture = captureList.get(position);
                     intent.putExtra("text", capture.getText());
@@ -94,7 +96,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     }
 
     private void updateCaptures() {
-        captureList = new ArrayList<>();
+        captureList.clear();
         SQLiteDatabase db = mHelper.getReadableDatabase();
         Cursor cursor = db.query(CaptureContract.CaptureEntry.TABLE,
                 new String[]{CaptureContract.CaptureEntry._ID,
@@ -102,8 +104,8 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                         CaptureContract.CaptureEntry.COL_CREATED},
                 null, null, null, null, null);
         while (cursor.moveToNext()) {
-            int textIdx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_TEXT);
             int idIdx =  cursor.getColumnIndex(CaptureContract.CaptureEntry._ID);
+            int textIdx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_TEXT);
             int createdIdx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_CREATED);
             Capture capture = new Capture(cursor.getLong(idIdx),
                     cursor.getString(textIdx), cursor.getString(createdIdx));
@@ -111,6 +113,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         }
         if (mAdapter != null) {
             mAdapter.notifyDataSetChanged();
+            Log.d(TAG, "dataset changed");
         }
         cursor.close();
         db.close();
@@ -125,7 +128,8 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                 else
                     selectedIds.add(capture.getId());
                 if (selectedIds.size() > 0)
-                    actionMode.setTitle(String.valueOf(selectedIds.size())); // show selected item count on action mode
+                    // show selected item count on action mode
+                    actionMode.setTitle(String.valueOf(selectedIds.size()));
                 else {
                     actionMode.setTitle(""); // remove item count from action mode
                     actionMode.finish(); // hide action mode
@@ -151,15 +155,28 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     public boolean onActionItemClicked(ActionMode mode, MenuItem menuItem) {
         switch (menuItem.getItemId()){
             case R.id.action_delete:
-                StringBuilder stringBuilder = new StringBuilder();
-                for (Capture data : captureList) {
-                    if (selectedIds.contains(data.getId()))
-                        stringBuilder.append("\n").append(data.getText());
+                SQLiteDatabase db = mHelper.getReadableDatabase();
+                int size = captureList.size();
+                String[] selectionArgs = new String[selectedIds.size()];
+                // number of parameters in query dependent on amount of selected items
+                String selection = CaptureContract.CaptureEntry._ID + " IN ("
+                        + TextUtils.join(",", Collections.nCopies(selectionArgs.length, "?")) + ")";
+                int delIdx = 0;
+                for (int i = 0; i < size; i++) {
+                    Capture capture = captureList.get(i);
+                    long id = capture.getId();
+                    if (selectedIds.contains(id)) {
+                        selectionArgs[delIdx] = Long.toString(id);
+                        delIdx++;
+                    }
                 }
-                Toast.makeText(this, "Selected items are :" + stringBuilder.toString(), Toast.LENGTH_SHORT).show();
+                db.delete(CaptureContract.CaptureEntry.TABLE, selection, selectionArgs);
+                db.close();
+                mode.finish();
                 return true;
+            default:
+                return false;
         }
-        return false;
     }
 
     @Override
@@ -168,6 +185,6 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         isMultiSelect = false;
         selectedIds = new ArrayList<>();
         mAdapter.setSelectedIds(new ArrayList<Long>());
+        updateCaptures();
     }
-
 }
