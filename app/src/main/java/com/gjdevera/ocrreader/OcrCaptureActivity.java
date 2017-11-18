@@ -27,7 +27,6 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Bundle;
-import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -48,7 +47,6 @@ import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
 import java.io.IOException;
-import java.util.Locale;
 
 /**
  * Activity for the Ocr Detecting app.  This app detects text and displays the value with the
@@ -76,9 +74,6 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     // Helper objects for detecting taps and pinches.
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetector gestureDetector;
-
-    // A TextToSpeech engine for speaking a String value.
-    private TextToSpeech tts;
 
     /**
      * Initializes the UI and creates the detector pipeline.
@@ -110,21 +105,6 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         Snackbar.make(mGraphicOverlay, "Tap to Speak. Pinch/Stretch to zoom",
                 Snackbar.LENGTH_LONG)
                 .show();
-
-        // Set up the Text To Speech engine.
-        TextToSpeech.OnInitListener listener =
-                new TextToSpeech.OnInitListener() {
-                    @Override
-                    public void onInit(final int status) {
-                        if (status == TextToSpeech.SUCCESS) {
-                            Log.d("OnInitListener", "Text to speech engine started successfully.");
-                            tts.setLanguage(Locale.US);
-                        } else {
-                            Log.d("OnInitListener", "Error starting the text to speech engine.");
-                        }
-                    }
-                };
-        tts = new TextToSpeech(this.getApplicationContext(), listener);
     }
 
     /**
@@ -352,12 +332,10 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                 finish();
                 /*Log.d(TAG, "text data is being spoken! " + text.getValue());
                 tts.speak(text.getValue(), TextToSpeech.QUEUE_ADD, null, "DEFAULT");*/
-            }
-            else {
+            } else {
                 Log.d(TAG, "text data is null");
             }
-        }
-        else {
+        } else {
             Log.d(TAG,"no text detected");
         }
         return text != null;

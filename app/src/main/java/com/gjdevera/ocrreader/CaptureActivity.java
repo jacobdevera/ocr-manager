@@ -1,5 +1,6 @@
 package com.gjdevera.ocrreader;
 
+import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
@@ -62,6 +63,8 @@ public class CaptureActivity extends AppCompatActivity {
                     db.update(CaptureContract.CaptureEntry.TABLE, values, selection, selectionArgs);
                 }
                 db.close();
+                Intent returnIntent = new Intent();
+                setResult(Activity.RESULT_OK,returnIntent);
                 finish();
                 return true;
 

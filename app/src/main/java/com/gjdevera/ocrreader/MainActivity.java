@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DividerItemDecoration;
@@ -23,11 +24,13 @@ import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Collections;
 
 public class MainActivity extends AppCompatActivity implements ActionMode.Callback {
     private static final String TAG = "MainActivity";
+    private Snackbar sb;
     private CaptureDbHelper mHelper;
     private List<Capture> captureList;
     private ActionMode actionMode;
@@ -71,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                     Capture capture = captureList.get(position);
                     intent.putExtra("text", capture.getText());
                     intent.putExtra("id", capture.getId());
-                    startActivity(intent);
+                    startActivityForResult(intent, 1);
                 }
             }
 
@@ -81,7 +84,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                     selectedIds = new ArrayList<>();
                     isMultiSelect = true;
                     if (actionMode == null){
-                        actionMode = startActionMode(MainActivity.this); //show ActionMode.
+                        actionMode = startActionMode(MainActivity.this);
                     }
                 }
                 multiSelect(position);
@@ -90,9 +93,28 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        if (sb != null) {
+            sb.dismiss();
+        }
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
         updateCaptures();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 1) {
+            switch (resultCode) {
+                case RESULT_OK:
+                    sb = Snackbar.make(findViewById(R.id.coordinatorLayout), getString(R.string.saved), Snackbar.LENGTH_LONG);
+                    sb.show();
+            }
+        }
     }
 
     private void updateCaptures() {
@@ -153,25 +175,42 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
 
     @Override
     public boolean onActionItemClicked(ActionMode mode, MenuItem menuItem) {
+        final SQLiteDatabase db = mHelper.getReadableDatabase();
+        final String[] selectionArgs = new String[selectedIds.size()];
+        final String selection = CaptureContract.CaptureEntry._ID + " IN ("
+                + TextUtils.join(",", Collections.nCopies(selectionArgs.length, "?")) + ")";
         switch (menuItem.getItemId()){
             case R.id.action_delete:
-                SQLiteDatabase db = mHelper.getReadableDatabase();
-                int size = captureList.size();
-                String[] selectionArgs = new String[selectedIds.size()];
-                // number of parameters in query dependent on amount of selected items
-                String selection = CaptureContract.CaptureEntry._ID + " IN ("
-                        + TextUtils.join(",", Collections.nCopies(selectionArgs.length, "?")) + ")";
-                int delIdx = 0;
-                for (int i = 0; i < size; i++) {
-                    Capture capture = captureList.get(i);
+                // build String array of selected captures
+                int argIdx = 0;
+                Iterator<Capture> itr = captureList.iterator();
+                while (itr.hasNext()) {
+                    Capture capture = itr.next();
                     long id = capture.getId();
                     if (selectedIds.contains(id)) {
-                        selectionArgs[delIdx] = Long.toString(id);
-                        delIdx++;
+                        selectionArgs[argIdx] = Long.toString(id);
+                        argIdx++;
+                        itr.remove();
                     }
                 }
-                db.delete(CaptureContract.CaptureEntry.TABLE, selection, selectionArgs);
-                db.close();
+                mAdapter.notifyDataSetChanged();
+                sb = Snackbar.make(findViewById(R.id.coordinatorLayout), getString(R.string.delete, selectedIds.size()), Snackbar.LENGTH_LONG);
+                sb.setAction(getString(R.string.undo), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        // did not delete; will restore items removed from the view
+                        updateCaptures();
+                    }
+                }).addCallback(new Snackbar.Callback() {
+                    @Override
+                    public void onDismissed(Snackbar snackbar, int dismissType) {
+                        super.onDismissed(snackbar, dismissType);
+                        if (dismissType != DISMISS_EVENT_ACTION) {
+                            db.delete(CaptureContract.CaptureEntry.TABLE, selection, selectionArgs);
+                            db.close();
+                        }
+                    }
+                }).show();
                 mode.finish();
                 return true;
             default:
@@ -185,6 +224,5 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         isMultiSelect = false;
         selectedIds = new ArrayList<>();
         mAdapter.setSelectedIds(new ArrayList<Long>());
-        updateCaptures();
     }
 }
