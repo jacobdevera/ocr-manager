@@ -49,7 +49,6 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
         Capture capture = captureList.get(position);
         String s = capture.getText();
         s = s.replace("\n"," ");
-        s = s.substring(0, Math.min(s.length(), 50));
         tv.setText(s);
         tv = (TextView) vh.itemView.findViewById(R.id.text2);
         tv.setText(getDate(capture.getCreated()));
@@ -88,7 +87,7 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
             formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
             Date value = formatter.parse(date);
 
-            SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd-yyyy HH:mm");
+            SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd-yyyy hh:mm a");
             dateFormatter.setTimeZone(TimeZone.getDefault());
             date = dateFormatter.format(value);
         }

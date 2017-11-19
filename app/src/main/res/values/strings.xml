@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ok">OK</string>
-    <string name="save">Save Capture</string>
+    <string name="save">Save capture</string>
+    <string name="share">Share captured text</string>
     <string name="saved">Capture saved</string>
     <string name="delete">%1$d captures deleted</string>
     <string name="undo">Undo</string>

@@ -6,4 +6,9 @@
         android:icon="@android:drawable/ic_menu_save"
         android:title="@string/save"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/action_share_capture"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="@string/share"
+        app:showAsAction="ifRoom" />
 </menu>

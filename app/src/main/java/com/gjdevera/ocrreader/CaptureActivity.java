@@ -17,6 +17,7 @@ import com.gjdevera.ocrreader.db.CaptureDbHelper;
 public class CaptureActivity extends AppCompatActivity {
     private static final String TAG = "CaptureActivity";
     private CaptureDbHelper mHelper;
+    private EditText editText;
     private boolean newCapture;
     private long id;
 
@@ -32,8 +33,8 @@ public class CaptureActivity extends AppCompatActivity {
         if (!newCapture) {
             id = intent.getLongExtra("id", -1);
         }
-        EditText captureEditText = (EditText) findViewById(R.id.editText);
-        captureEditText.setText(result);
+        editText = (EditText) findViewById(R.id.editText);
+        editText.setText(result);
     }
 
     @Override
@@ -44,10 +45,9 @@ public class CaptureActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        String text = String.valueOf(editText.getText());
         switch (item.getItemId()) {
             case R.id.action_save_capture:
-                EditText captureEditText = (EditText) findViewById(R.id.editText);
-                String text = String.valueOf(captureEditText.getText());
                 Log.d(TAG, "Saved OCR capture");
                 SQLiteDatabase db = mHelper.getWritableDatabase();
                 ContentValues values = new ContentValues();
@@ -67,7 +67,16 @@ public class CaptureActivity extends AppCompatActivity {
                 setResult(Activity.RESULT_OK,returnIntent);
                 finish();
                 return true;
+            case R.id.action_share_capture:
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, text);
+                sendIntent.setType("text/plain");
 
+                // Verify that the intent will resolve to an activity
+                if (sendIntent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(sendIntent);
+                }
             default:
                 return super.onOptionsItemSelected(item);
         }
