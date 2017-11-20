@@ -27,6 +27,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -46,7 +47,13 @@ import com.gjdevera.ocrreader.ui.camera.CameraSourcePreview;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * Activity for the Ocr Detecting app.  This app detects text and displays the value with the
@@ -320,26 +327,37 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         if (graphic != null) {
             text = graphic.getTextBlock();
             if (text != null && text.getValue() != null) {
+                final String s = text.getValue();
                 CameraSource.ShutterCallback sc = new CameraSource.ShutterCallback() {
                     @Override
                     public void onShutter() {
                         // TODO: play sound
                     }
                 };
-
                 CameraSource.PictureCallback pc = new CameraSource.PictureCallback() {
                     @Override
                     public void onPictureTaken(byte[] data) {
-                        // TODO: store bitmap
+                        try {
+                            FileOutputStream fos = new FileOutputStream(getOutputMediaFile());
+                            fos.write(data);
+                            fos.close();
+                            Log.d(TAG, "Saved image: " +
+                                    getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES));
+                        } catch (FileNotFoundException e) {
+                            Log.d(TAG, "File not found: " + e.getMessage());
+                        } catch (IOException e) {
+                            Log.d(TAG, "Error accessing file: " + e.getMessage());
+                        }
+
+                        startActivity(new Intent()
+                                .setClass(getApplicationContext(), CaptureActivity.class)
+                                .putExtra("text", s)
+                                .putExtra("newCapture", true)
+                        );
+                        finish();
                     }
                 };
                 mCameraSource.takePicture(sc, pc);
-                startActivity(new Intent()
-                        .setClass(getApplicationContext(), CaptureActivity.class)
-                        .putExtra("text", text.getValue())
-                        .putExtra("newCapture", true)
-                );
-                finish();
             } else {
                 Log.d(TAG, "text data is null");
             }
@@ -349,12 +367,18 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         return text != null;
     }
 
-    public void onShutter() {
-
-    }
-
-    public void onPictureTaken(byte[] data) {
-
+    private File getOutputMediaFile(){
+        File mediaStorageDir = new File(getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Scans");
+        // Create the storage directory if it does not exist
+        if (!mediaStorageDir.exists()){
+            if (! mediaStorageDir.mkdirs()){
+                Log.d(TAG, "failed to create directory");
+                return null;
+            }
+        }
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        return new File(mediaStorageDir.getPath() + File.separator +
+                "IMG_"+ timeStamp + ".jpg");
     }
 
     private class CaptureGestureListener extends GestureDetector.SimpleOnGestureListener {
