@@ -17,6 +17,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.gjdevera.ocrreader.db.Capture;
@@ -35,7 +36,6 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     private List<Capture> captureList;
     private ActionMode actionMode;
     private CaptureViewAdapter mAdapter;
-    private boolean isMultiSelect;
     private List<Long> selectedIds;
 
     @Override
@@ -51,7 +51,6 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
             }
         });
         mHelper = new CaptureDbHelper(this);
-        isMultiSelect = false;
         selectedIds = new ArrayList<>();
 
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(this);
@@ -67,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         mRecyclerView.addOnItemTouchListener(new RecyclerItemTouchListener(this, mRecyclerView, new RecyclerItemTouchListener.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
-                if (isMultiSelect){ // if selecting multiple items
+                if (actionMode != null){ // if selecting multiple items
                     multiSelect(position);
                 } else { // open capture normally
                     Intent intent = new Intent(getApplicationContext(), CaptureActivity.class);
@@ -80,16 +79,14 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
 
             @Override
             public void onItemLongClick(View view, int position) {
-                if (!isMultiSelect){
+                if (actionMode == null){
                     selectedIds = new ArrayList<>();
-                    isMultiSelect = true;
-                    if (actionMode == null){
-                        actionMode = startActionMode(MainActivity.this);
-                    }
+                    actionMode = startActionMode(MainActivity.this);
                 }
                 multiSelect(position);
             }
         }));
+
     }
 
     @Override
@@ -139,6 +136,19 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         }
         cursor.close();
         db.close();
+        checkEmpty();
+    }
+
+    private void checkEmpty() {
+        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        TextView emptyView = (TextView) findViewById(R.id.empty_view);
+        if (captureList.isEmpty()) {
+            recyclerView.setVisibility(View.GONE);
+            emptyView.setVisibility(View.VISIBLE);
+        } else {
+            recyclerView.setVisibility(View.VISIBLE);
+            emptyView.setVisibility(View.GONE);
+        }
     }
 
     private void multiSelect(int position) {
@@ -146,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         if (capture != null){
             if (actionMode != null) {
                 if (selectedIds.contains(capture.getId()))
-                    selectedIds.remove(Long.valueOf(capture.getId()));
+                    selectedIds.remove(capture.getId());
                 else
                     selectedIds.add(capture.getId());
                 if (selectedIds.size() > 0)
@@ -162,9 +172,24 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_select:
+                actionMode = startActionMode(MainActivity.this);
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
     public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-        MenuInflater inflater = mode.getMenuInflater();
-        inflater.inflate(R.menu.menu_select, menu);
+        mode.getMenuInflater().inflate(R.menu.menu_select, menu);
         return true;
     }
 
@@ -194,6 +219,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                     }
                 }
                 mAdapter.notifyDataSetChanged();
+                checkEmpty();
                 sb = Snackbar.make(findViewById(R.id.coordinatorLayout), getString(R.string.delete, selectedIds.size()), Snackbar.LENGTH_LONG);
                 sb.setAction(getString(R.string.undo), new View.OnClickListener() {
                     @Override
@@ -221,7 +247,6 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     @Override
     public void onDestroyActionMode(ActionMode mode) {
         actionMode = null;
-        isMultiSelect = false;
         selectedIds = new ArrayList<>();
         mAdapter.setSelectedIds(new ArrayList<Long>());
     }

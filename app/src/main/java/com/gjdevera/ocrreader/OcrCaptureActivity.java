@@ -101,10 +101,6 @@ public final class OcrCaptureActivity extends AppCompatActivity {
 
         gestureDetector = new GestureDetector(this, new CaptureGestureListener());
         scaleGestureDetector = new ScaleGestureDetector(this, new ScaleListener());
-
-        Snackbar.make(mGraphicOverlay, "Tap to Speak. Pinch/Stretch to zoom",
-                Snackbar.LENGTH_LONG)
-                .show();
     }
 
     /**
@@ -324,14 +320,26 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         if (graphic != null) {
             text = graphic.getTextBlock();
             if (text != null && text.getValue() != null) {
+                CameraSource.ShutterCallback sc = new CameraSource.ShutterCallback() {
+                    @Override
+                    public void onShutter() {
+                        // TODO: play sound
+                    }
+                };
+
+                CameraSource.PictureCallback pc = new CameraSource.PictureCallback() {
+                    @Override
+                    public void onPictureTaken(byte[] data) {
+                        // TODO: store bitmap
+                    }
+                };
+                mCameraSource.takePicture(sc, pc);
                 startActivity(new Intent()
                         .setClass(getApplicationContext(), CaptureActivity.class)
                         .putExtra("text", text.getValue())
                         .putExtra("newCapture", true)
                 );
                 finish();
-                /*Log.d(TAG, "text data is being spoken! " + text.getValue());
-                tts.speak(text.getValue(), TextToSpeech.QUEUE_ADD, null, "DEFAULT");*/
             } else {
                 Log.d(TAG, "text data is null");
             }
@@ -341,8 +349,15 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         return text != null;
     }
 
-    private class CaptureGestureListener extends GestureDetector.SimpleOnGestureListener {
+    public void onShutter() {
 
+    }
+
+    public void onPictureTaken(byte[] data) {
+
+    }
+
+    private class CaptureGestureListener extends GestureDetector.SimpleOnGestureListener {
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {
             return onTap(e.getRawX(), e.getRawY()) || super.onSingleTapConfirmed(e);
