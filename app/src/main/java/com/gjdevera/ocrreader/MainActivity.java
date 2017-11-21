@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                     Capture capture = captureList.get(position);
                     intent.putExtra("text", capture.getText());
                     intent.putExtra("id", capture.getId());
+                    intent.putExtra("path", capture.getPath());
                     startActivityForResult(intent, 1);
                 }
             }
@@ -120,14 +121,16 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         Cursor cursor = db.query(CaptureContract.CaptureEntry.TABLE,
                 new String[]{CaptureContract.CaptureEntry._ID,
                         CaptureContract.CaptureEntry.COL_TEXT,
-                        CaptureContract.CaptureEntry.COL_CREATED},
+                        CaptureContract.CaptureEntry.COL_CREATED,
+                        CaptureContract.CaptureEntry.COL_PATH},
                 null, null, null, null, null);
         while (cursor.moveToNext()) {
             int idIdx =  cursor.getColumnIndex(CaptureContract.CaptureEntry._ID);
             int textIdx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_TEXT);
             int createdIdx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_CREATED);
+            int pathIdx = cursor.getColumnIndex(CaptureContract.CaptureEntry.COL_PATH);
             Capture capture = new Capture(cursor.getLong(idIdx),
-                    cursor.getString(textIdx), cursor.getString(createdIdx));
+                    cursor.getString(textIdx), cursor.getString(createdIdx), cursor.getString(pathIdx));
             captureList.add(capture);
         }
         if (mAdapter != null) {

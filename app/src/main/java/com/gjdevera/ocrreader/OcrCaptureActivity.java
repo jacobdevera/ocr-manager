@@ -25,9 +25,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -145,9 +146,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         boolean b = scaleGestureDetector.onTouchEvent(e);
-
         boolean c = gestureDetector.onTouchEvent(e);
-
         return b || c || super.onTouchEvent(e);
     }
 
@@ -302,7 +301,6 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                     GoogleApiAvailability.getInstance().getErrorDialog(this, code, RC_HANDLE_GMS);
             dlg.show();
         }
-
         if (mCameraSource != null) {
             try {
                 mPreview.start(mCameraSource, mGraphicOverlay);
@@ -338,23 +336,24 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                     @Override
                     public void onPictureTaken(byte[] data) {
                         try {
-                            FileOutputStream fos = new FileOutputStream(getOutputMediaFile());
+                            File photo = getOutputMediaFile();
+                            FileOutputStream fos = new FileOutputStream(photo);
                             fos.write(data);
                             fos.close();
-                            Log.d(TAG, "Saved image: " +
-                                    getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES));
+                            startActivity(new Intent()
+                                    .setClass(getApplicationContext(), CaptureActivity.class)
+                                    .putExtra("text", s)
+                                    .putExtra("newCapture", true)
+                                    .putExtra("path", photo.getAbsolutePath())
+                            );
+                            Intent returnIntent = new Intent();
+                            setResult(Activity.RESULT_OK,returnIntent);
+                            finish();
                         } catch (FileNotFoundException e) {
                             Log.d(TAG, "File not found: " + e.getMessage());
                         } catch (IOException e) {
                             Log.d(TAG, "Error accessing file: " + e.getMessage());
                         }
-
-                        startActivity(new Intent()
-                                .setClass(getApplicationContext(), CaptureActivity.class)
-                                .putExtra("text", s)
-                                .putExtra("newCapture", true)
-                        );
-                        finish();
                     }
                 };
                 mCameraSource.takePicture(sc, pc);
@@ -367,13 +366,13 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         return text != null;
     }
 
+    // get cache directory to temporarily store photo
     private File getOutputMediaFile(){
-        File mediaStorageDir = new File(getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Scans");
-        // Create the storage directory if it does not exist
-        if (!mediaStorageDir.exists()){
-            if (! mediaStorageDir.mkdirs()){
+        File mediaStorageDir = new File(getApplicationContext().getCacheDir(), "Scans");
+        if (!mediaStorageDir.exists()) {
+            if (!mediaStorageDir.mkdirs()) {
                 Log.d(TAG, "failed to create directory");
-                return null;
+                    return null;
             }
         }
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());

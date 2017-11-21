@@ -2,6 +2,7 @@
 <resources>
     <string name="ok">OK</string>
     <string name="select">Select</string>
+    <string name="current_capture">Current capture</string>
     <string name="save">Save capture</string>
     <string name="share">Share captured text</string>
     <string name="saved">Capture saved</string>

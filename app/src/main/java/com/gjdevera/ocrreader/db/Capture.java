@@ -4,11 +4,14 @@ public class Capture {
     private long id;
     private String text;
     private String created;
+    private String path;
 
-    public Capture(long id, String text, String created) {
+    public Capture(long id, String text, String created, String path) {
         this.id = id;
         this.text = text;
         this.created = created;
+        this.path = path;
+
     }
 
     public long getId() {
@@ -31,7 +34,7 @@ public class Capture {
         return created;
     }
 
-    public void setCreated(String created) {
-        this.created = created;
+    public String getPath() {
+        return path;
     }
 }

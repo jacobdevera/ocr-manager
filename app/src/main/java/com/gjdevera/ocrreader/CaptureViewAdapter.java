@@ -2,6 +2,8 @@ package com.gjdevera.ocrreader;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.ColorDrawable;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
@@ -9,9 +11,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.gjdevera.ocrreader.db.Capture;
+import com.gjdevera.ocrreader.db.ImgHelper;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -46,6 +50,7 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
     @Override
     public void onBindViewHolder(CaptureViewHolder vh, int position) {
         TextView tv = (TextView) vh.itemView.findViewById(R.id.text1);
+        ImageView iv = (ImageView) vh.itemView.findViewById(R.id.image);
         Capture capture = captureList.get(position);
         String s = capture.getText();
         s = s.replace("\n"," ");
@@ -53,6 +58,8 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
         tv = (TextView) vh.itemView.findViewById(R.id.text2);
         tv.setText(getDate(capture.getCreated()));
 
+        Bitmap bmp = ImgHelper.getCorrectedImageOrientation(capture.getPath());
+        iv.setImageBitmap(bmp);
         if (selectedIds.contains(capture.getId())){
             vh.rootView.setForeground(new ColorDrawable(ContextCompat.getColor(context,R.color.colorControlActivated)));
         } else {

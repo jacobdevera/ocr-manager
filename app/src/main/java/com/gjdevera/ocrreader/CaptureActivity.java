@@ -4,21 +4,25 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
+import android.widget.ImageView;
 
 import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
+import com.gjdevera.ocrreader.db.ImgHelper;
 
 public class CaptureActivity extends AppCompatActivity {
     private static final String TAG = "CaptureActivity";
     private CaptureDbHelper mHelper;
     private EditText editText;
     private boolean newCapture;
+    private String path;
     private long id;
 
     @Override
@@ -30,11 +34,16 @@ public class CaptureActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String result = intent.getStringExtra("text");
         newCapture = intent.getBooleanExtra("newCapture", false);
+        path = intent.getStringExtra("path");
         if (!newCapture) {
             id = intent.getLongExtra("id", -1);
         }
         editText = (EditText) findViewById(R.id.editText);
         editText.setText(result);
+
+        ImageView imageView = findViewById(R.id.imageView);
+        Bitmap bmp = ImgHelper.getCorrectedImageOrientation(path);
+        imageView.setImageBitmap(bmp);
     }
 
     @Override
@@ -50,8 +59,11 @@ public class CaptureActivity extends AppCompatActivity {
             case R.id.action_save_capture:
                 Log.d(TAG, "Saved OCR capture");
                 SQLiteDatabase db = mHelper.getWritableDatabase();
+
                 ContentValues values = new ContentValues();
                 values.put(CaptureContract.CaptureEntry.COL_TEXT, text);
+                values.put(CaptureContract.CaptureEntry.COL_PATH, path);
+
                 if (newCapture) { // new capture
                     db.insertWithOnConflict(CaptureContract.CaptureEntry.TABLE,
                             null,
@@ -67,6 +79,7 @@ public class CaptureActivity extends AppCompatActivity {
                 setResult(Activity.RESULT_OK,returnIntent);
                 finish();
                 return true;
+
             case R.id.action_share_capture:
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
