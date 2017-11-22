@@ -236,6 +236,15 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == RESULT_OK) { // from CaptureActivity
+            Intent returnIntent = new Intent(); // prompt main activity to update captures
+            setResult(Activity.RESULT_OK,returnIntent);
+            finish();
+        }
+    }
+
     /**
      * Callback for the result from requesting permissions. This method
      * is invoked for every call on {@link #requestPermissions(String[], int)}.
@@ -340,15 +349,12 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                             FileOutputStream fos = new FileOutputStream(photo);
                             fos.write(data);
                             fos.close();
-                            startActivity(new Intent()
+                            startActivityForResult(new Intent()
                                     .setClass(getApplicationContext(), CaptureActivity.class)
                                     .putExtra("text", s)
                                     .putExtra("newCapture", true)
-                                    .putExtra("path", photo.getAbsolutePath())
+                                    .putExtra("path", photo.getAbsolutePath()), 1
                             );
-                            Intent returnIntent = new Intent();
-                            setResult(Activity.RESULT_OK,returnIntent);
-                            finish();
                         } catch (FileNotFoundException e) {
                             Log.d(TAG, "File not found: " + e.getMessage());
                         } catch (IOException e) {
@@ -368,7 +374,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
 
     // get cache directory to temporarily store photo
     private File getOutputMediaFile(){
-        File mediaStorageDir = new File(getApplicationContext().getCacheDir(), "Scans");
+        File mediaStorageDir = new File(getApplicationContext().getExternalCacheDir(), "Scans");
         if (!mediaStorageDir.exists()) {
             if (!mediaStorageDir.mkdirs()) {
                 Log.d(TAG, "failed to create directory");
@@ -377,7 +383,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         }
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
         return new File(mediaStorageDir.getPath() + File.separator +
-                "IMG_"+ timeStamp + ".jpg");
+                "IMG_" + timeStamp + ".jpg");
     }
 
     private class CaptureGestureListener extends GestureDetector.SimpleOnGestureListener {

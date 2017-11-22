@@ -5,6 +5,7 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,9 +14,14 @@ import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.ImageView;
 
+import com.bumptech.glide.Glide;
 import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
 import com.gjdevera.ocrreader.db.ImgHelper;
+
+import java.io.File;
+
+import static com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade;
 
 public class CaptureActivity extends AppCompatActivity {
     private static final String TAG = "CaptureActivity";
@@ -41,9 +47,8 @@ public class CaptureActivity extends AppCompatActivity {
         editText = (EditText) findViewById(R.id.editText);
         editText.setText(result);
 
-        ImageView imageView = findViewById(R.id.imageView);
-        Bitmap bmp = ImgHelper.getCorrectedImageOrientation(path);
-        imageView.setImageBitmap(bmp);
+        ImageView iv = findViewById(R.id.imageView);
+        Glide.with(this).load(new File(path)).into(iv);
     }
 
     @Override
@@ -80,7 +85,7 @@ public class CaptureActivity extends AppCompatActivity {
                 finish();
                 return true;
 
-            case R.id.action_share_capture:
+            case R.id.action_share_text:
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
                 sendIntent.putExtra(Intent.EXTRA_TEXT, text);
@@ -90,6 +95,16 @@ public class CaptureActivity extends AppCompatActivity {
                 if (sendIntent.resolveActivity(getPackageManager()) != null) {
                     startActivity(sendIntent);
                 }
+                return true;
+
+            case R.id.action_share_photo:
+                Intent shareIntent = new Intent();
+                shareIntent.setAction(Intent.ACTION_SEND);
+                shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File(path)));
+                shareIntent.setType("image/jpeg");
+                startActivity(Intent.createChooser(shareIntent, getResources().getText(R.string.share_photo)));
+                return true;
+
             default:
                 return super.onOptionsItemSelected(item);
         }

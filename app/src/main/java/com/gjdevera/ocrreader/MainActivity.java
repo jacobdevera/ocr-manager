@@ -25,6 +25,7 @@ import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Collections;
@@ -36,7 +37,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     private List<Capture> captureList;
     private ActionMode actionMode;
     private CaptureViewAdapter mAdapter;
-    private List<Long> selectedIds;
+    private List<Integer> selectedIds;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +48,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startActivity(new Intent().setClass(getApplicationContext(), OcrCaptureActivity.class));
+                startActivityForResult(new Intent().setClass(getApplicationContext(), OcrCaptureActivity.class), 1);
             }
         });
         mHelper = new CaptureDbHelper(this);
@@ -81,13 +82,11 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
             @Override
             public void onItemLongClick(View view, int position) {
                 if (actionMode == null){
-                    selectedIds = new ArrayList<>();
                     actionMode = startActionMode(MainActivity.this);
                 }
                 multiSelect(position);
             }
         }));
-
     }
 
     @Override
@@ -99,18 +98,13 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
-        updateCaptures();
-    }
-
-    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == 1) {
             switch (resultCode) {
                 case RESULT_OK:
                     sb = Snackbar.make(findViewById(R.id.coordinatorLayout), getString(R.string.saved), Snackbar.LENGTH_LONG);
                     sb.show();
+                    updateCaptures();
             }
         }
     }
@@ -145,31 +139,28 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     private void checkEmpty() {
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         TextView emptyView = (TextView) findViewById(R.id.empty_view);
-        if (captureList.isEmpty()) {
-            recyclerView.setVisibility(View.GONE);
-            emptyView.setVisibility(View.VISIBLE);
-        } else {
-            recyclerView.setVisibility(View.VISIBLE);
-            emptyView.setVisibility(View.GONE);
-        }
+        recyclerView.setVisibility(captureList.isEmpty() ? View.GONE : View.VISIBLE);
+        emptyView.setVisibility(captureList.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     private void multiSelect(int position) {
         Capture capture = captureList.get(position);
         if (capture != null){
             if (actionMode != null) {
-                if (selectedIds.contains(capture.getId()))
-                    selectedIds.remove(capture.getId());
-                else
-                    selectedIds.add(capture.getId());
-                if (selectedIds.size() > 0)
+                if (selectedIds.contains(position)) {
+                    selectedIds.remove((Integer) position);
+                } else {
+                    selectedIds.add(position);
+                }
+                if (selectedIds.size() > 0) {
                     // show selected item count on action mode
                     actionMode.setTitle(String.valueOf(selectedIds.size()));
-                else {
+                } else {
                     actionMode.setTitle(""); // remove item count from action mode
                     actionMode.finish(); // hide action mode
                 }
                 mAdapter.setSelectedIds(selectedIds);
+                mAdapter.notifyDataSetChanged();
             }
         }
     }
@@ -211,17 +202,19 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
             case R.id.action_delete:
                 // build String array of selected captures
                 int argIdx = 0;
-                Iterator<Capture> itr = captureList.iterator();
-                while (itr.hasNext()) {
-                    Capture capture = itr.next();
-                    long id = capture.getId();
-                    if (selectedIds.contains(id)) {
-                        selectionArgs[argIdx] = Long.toString(id);
-                        argIdx++;
-                        itr.remove();
+                // reverse order to ensure removes don't shift indices of selected items
+                Collections.sort(selectedIds, new Comparator<Integer>() {
+                    public int compare(Integer a, Integer b) {
+                        return b.compareTo(a);
                     }
+                });
+                for (int pos : selectedIds) {
+                    Capture capture = captureList.get(pos);
+                    captureList.remove(capture);
+                    selectionArgs[argIdx] = Long.toString(capture.getId());
+                    mAdapter.notifyItemRemoved(pos);
+                    argIdx++;
                 }
-                mAdapter.notifyDataSetChanged();
                 checkEmpty();
                 sb = Snackbar.make(findViewById(R.id.coordinatorLayout), getString(R.string.delete, selectedIds.size()), Snackbar.LENGTH_LONG);
                 sb.setAction(getString(R.string.undo), new View.OnClickListener() {
@@ -250,7 +243,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     @Override
     public void onDestroyActionMode(ActionMode mode) {
         actionMode = null;
-        selectedIds = new ArrayList<>();
-        mAdapter.setSelectedIds(new ArrayList<Long>());
+        selectedIds.clear();
+        mAdapter.notifyDataSetChanged();
     }
 }

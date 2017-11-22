@@ -14,14 +14,20 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.gjdevera.ocrreader.db.Capture;
 import com.gjdevera.ocrreader.db.ImgHelper;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+
+import static com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.with;
+import static com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade;
 
 /**
  * Created by Jacob on 11/10/2017.
@@ -30,7 +36,7 @@ import java.util.TimeZone;
 public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.CaptureViewHolder> {
     private Context context;
     private List<Capture> captureList;
-    private List<Long> selectedIds;
+    private List<Integer> selectedIds;
 
     public CaptureViewAdapter(Context context, List<Capture> captureList) {
         this.context = context;
@@ -58,18 +64,20 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
         tv = (TextView) vh.itemView.findViewById(R.id.text2);
         tv.setText(getDate(capture.getCreated()));
 
-        Bitmap bmp = ImgHelper.getCorrectedImageOrientation(capture.getPath());
-        iv.setImageBitmap(bmp);
-        if (selectedIds.contains(capture.getId())){
-            vh.rootView.setForeground(new ColorDrawable(ContextCompat.getColor(context,R.color.colorControlActivated)));
-        } else {
-            vh.rootView.setForeground(new ColorDrawable(ContextCompat.getColor(context,android.R.color.transparent)));
-        }
+        Glide.with(context).load(new File(capture.getPath())).into(iv);
+        vh.rootView.setForeground(
+                selectedIds.contains(position) ?
+                        new ColorDrawable(ContextCompat.getColor(context,R.color.colorControlActivated))
+                        : new ColorDrawable(ContextCompat.getColor(context,android.R.color.transparent)));
     }
 
-    public void setSelectedIds(List<Long> selectedIds) {
+    public void setSelectedIds(List<Integer> selectedIds) {
         this.selectedIds = selectedIds;
-        notifyDataSetChanged();
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return captureList.get(position).getId();
     }
 
     @Override

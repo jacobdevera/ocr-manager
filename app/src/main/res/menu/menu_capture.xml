@@ -5,10 +5,19 @@
         android:id="@+id/action_save_capture"
         android:icon="@android:drawable/ic_menu_save"
         android:title="@string/save"
-        app:showAsAction="always" />
-    <item
-        android:id="@+id/action_share_capture"
-        android:icon="@android:drawable/ic_menu_share"
-        android:title="@string/share"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_share"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="@string/share_text"
+        app:showAsAction="ifRoom">
+        <menu>
+            <item
+                android:id="@+id/action_share_text"
+                android:title="@string/share_text" />
+            <item
+                android:id="@+id/action_share_photo"
+                android:title="@string/share_photo" />
+        </menu>
+    </item>
 </menu>
