@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,11 +16,8 @@ import android.widget.ImageView;
 import com.bumptech.glide.Glide;
 import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
-import com.gjdevera.ocrreader.db.ImgHelper;
 
 import java.io.File;
-
-import static com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade;
 
 public class CaptureActivity extends AppCompatActivity {
     private static final String TAG = "CaptureActivity";
@@ -44,7 +40,7 @@ public class CaptureActivity extends AppCompatActivity {
         if (!newCapture) {
             id = intent.getLongExtra("id", -1);
         }
-        editText = (EditText) findViewById(R.id.editText);
+        editText = findViewById(R.id.editText);
         editText.setText(result);
 
         ImageView iv = findViewById(R.id.imageView);

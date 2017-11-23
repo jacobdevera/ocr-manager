@@ -15,7 +15,6 @@
  */
 package com.gjdevera.ocrreader;
 
-import android.util.Log;
 import android.util.SparseArray;
 
 import com.gjdevera.ocrreader.ui.camera.GraphicOverlay;

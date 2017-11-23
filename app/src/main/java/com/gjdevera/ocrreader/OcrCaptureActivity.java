@@ -25,9 +25,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.hardware.Camera;
+import android.media.MediaActionSound;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -38,7 +37,6 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.widget.Toast;
 
 import com.gjdevera.ocrreader.ui.camera.CameraSource;
 import com.gjdevera.ocrreader.ui.camera.GraphicOverlay;
@@ -73,7 +71,6 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     // Constants used to pass extra data in the intent
     public static final String AutoFocus = "AutoFocus";
     public static final String UseFlash = "UseFlash";
-    public static final String TextBlockObject = "String";
 
     private CameraSource mCameraSource;
     private CameraSourcePreview mPreview;
@@ -92,9 +89,8 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         setContentView(R.layout.ocr_capture);
 
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
-        mGraphicOverlay = (GraphicOverlay<OcrGraphic>) findViewById(R.id.graphicOverlay);
+        mGraphicOverlay = findViewById(R.id.graphicOverlay);
 
-        // Set good defaults for capturing text.
         boolean autoFocus = true;
         boolean useFlash = false;
 
@@ -187,8 +183,8 @@ public final class OcrCaptureActivity extends AppCompatActivity {
             boolean hasLowStorage = registerReceiver(null, lowstorageFilter) != null;
 
             if (hasLowStorage) {
-                Toast.makeText(this, R.string.low_storage_error, Toast.LENGTH_LONG).show();
-                Log.w(TAG, getString(R.string.low_storage_error));
+                Snackbar.make(findViewById(R.id.coordinatorLayout),
+                        getString(R.string.low_storage_error), Snackbar.LENGTH_LONG);
             }
         }
 
@@ -306,15 +302,15 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(
                 getApplicationContext());
         if (code != ConnectionResult.SUCCESS) {
-            Dialog dlg =
-                    GoogleApiAvailability.getInstance().getErrorDialog(this, code, RC_HANDLE_GMS);
+            Dialog dlg = GoogleApiAvailability.getInstance().getErrorDialog(this, code, RC_HANDLE_GMS);
             dlg.show();
         }
         if (mCameraSource != null) {
             try {
                 mPreview.start(mCameraSource, mGraphicOverlay);
             } catch (IOException e) {
-                Log.e(TAG, "Unable to start camera source.", e);
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "Unable to start camera: "
+                        + e.getMessage(), Snackbar.LENGTH_LONG);
                 mCameraSource.release();
                 mCameraSource = null;
             }
@@ -339,6 +335,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                     @Override
                     public void onShutter() {
                         // TODO: play sound
+                        new MediaActionSound().play(MediaActionSound.SHUTTER_CLICK);
                     }
                 };
                 CameraSource.PictureCallback pc = new CameraSource.PictureCallback() {
@@ -356,18 +353,16 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                                     .putExtra("path", photo.getAbsolutePath()), 1
                             );
                         } catch (FileNotFoundException e) {
-                            Log.d(TAG, "File not found: " + e.getMessage());
+                            Snackbar.make(findViewById(R.id.coordinatorLayout), "File not found: "
+                                    + e.getMessage(), Snackbar.LENGTH_LONG);
                         } catch (IOException e) {
-                            Log.d(TAG, "Error accessing file: " + e.getMessage());
+                            Snackbar.make(findViewById(R.id.coordinatorLayout), "Error accessing file: "
+                                    + e.getMessage(), Snackbar.LENGTH_LONG);
                         }
                     }
                 };
                 mCameraSource.takePicture(sc, pc);
-            } else {
-                Log.d(TAG, "text data is null");
             }
-        } else {
-            Log.d(TAG,"no text detected");
         }
         return text != null;
     }

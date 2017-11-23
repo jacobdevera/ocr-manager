@@ -14,19 +14,17 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.ActionMode;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.gjdevera.ocrreader.db.Capture;
 import com.gjdevera.ocrreader.db.CaptureContract;
 import com.gjdevera.ocrreader.db.CaptureDbHelper;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Collections;
 
@@ -44,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.floatingActionButton);
+        final FloatingActionButton fab = findViewById(R.id.floatingActionButton);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -55,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
         selectedIds = new ArrayList<>();
 
         LinearLayoutManager mLayoutManager = new LinearLayoutManager(this);
-        RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        RecyclerView mRecyclerView = findViewById(R.id.recycler_view);
         mRecyclerView.setLayoutManager(mLayoutManager);
         captureList = new ArrayList<>();
         mAdapter = new CaptureViewAdapter(this, captureList);
@@ -137,8 +135,8 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
     }
 
     private void checkEmpty() {
-        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-        TextView emptyView = (TextView) findViewById(R.id.empty_view);
+        RecyclerView recyclerView = findViewById(R.id.recycler_view);
+        TextView emptyView = findViewById(R.id.empty_view);
         recyclerView.setVisibility(captureList.isEmpty() ? View.GONE : View.VISIBLE);
         emptyView.setVisibility(captureList.isEmpty() ? View.VISIBLE : View.GONE);
     }
@@ -200,8 +198,8 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                 + TextUtils.join(",", Collections.nCopies(selectionArgs.length, "?")) + ")";
         switch (menuItem.getItemId()){
             case R.id.action_delete:
-                // build String array of selected captures
-                int argIdx = 0;
+                int argIdx = 0; // build String array of selected captures
+                final List<String> pathList = new ArrayList<>(); // photos to delete
                 // reverse order to ensure removes don't shift indices of selected items
                 Collections.sort(selectedIds, new Comparator<Integer>() {
                     public int compare(Integer a, Integer b) {
@@ -211,6 +209,7 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                 for (int pos : selectedIds) {
                     Capture capture = captureList.get(pos);
                     captureList.remove(capture);
+                    pathList.add(capture.getPath());
                     selectionArgs[argIdx] = Long.toString(capture.getId());
                     mAdapter.notifyItemRemoved(pos);
                     argIdx++;
@@ -227,6 +226,9 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                     @Override
                     public void onDismissed(Snackbar snackbar, int dismissType) {
                         super.onDismissed(snackbar, dismissType);
+                        for (String path : pathList) {
+                            new File(path).delete();
+                        }
                         if (dismissType != DISMISS_EVENT_ACTION) {
                             db.delete(CaptureContract.CaptureEntry.TABLE, selection, selectionArgs);
                             db.close();
