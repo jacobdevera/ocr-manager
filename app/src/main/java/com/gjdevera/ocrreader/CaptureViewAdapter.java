@@ -1,9 +1,6 @@
 package com.gjdevera.ocrreader;
 
 import android.content.Context;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.ColorDrawable;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
@@ -15,19 +12,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.gjdevera.ocrreader.db.Capture;
-import com.gjdevera.ocrreader.db.ImgHelper;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
-
-import static com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.with;
-import static com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade;
 
 /**
  * Created by Jacob on 11/10/2017.
@@ -55,13 +48,13 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
 
     @Override
     public void onBindViewHolder(CaptureViewHolder vh, int position) {
-        TextView tv = (TextView) vh.itemView.findViewById(R.id.text1);
-        ImageView iv = (ImageView) vh.itemView.findViewById(R.id.image);
+        TextView tv = vh.itemView.findViewById(R.id.text1);
+        ImageView iv = vh.itemView.findViewById(R.id.image);
         Capture capture = captureList.get(position);
         String s = capture.getText();
         s = s.replace("\n"," ");
         tv.setText(s);
-        tv = (TextView) vh.itemView.findViewById(R.id.text2);
+        tv = vh.itemView.findViewById(R.id.text2);
         tv.setText(getDate(capture.getCreated()));
 
         Glide.with(context).load(new File(capture.getPath())).into(iv);
@@ -102,8 +95,7 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
             formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
             Date value = formatter.parse(date);
 
-            SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd-yyyy hh:mm a");
-            dateFormatter.setTimeZone(TimeZone.getDefault());
+            SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd-yyyy hh:mm a", Locale.getDefault());
             date = dateFormatter.format(value);
         }
         catch (Exception e) {

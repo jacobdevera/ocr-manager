@@ -75,6 +75,9 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     private CameraSource mCameraSource;
     private CameraSourcePreview mPreview;
     private GraphicOverlay<OcrGraphic> mGraphicOverlay;
+    private File photo;
+    private OcrDetectorProcessor detectorProcessor;
+    private Boolean safeToTakePicture;
 
     // Helper objects for detecting taps and pinches.
     private ScaleGestureDetector scaleGestureDetector;
@@ -88,7 +91,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         super.onCreate(bundle);
         setContentView(R.layout.ocr_capture);
 
-        mPreview = (CameraSourcePreview) findViewById(R.id.preview);
+        mPreview = findViewById(R.id.preview);
         mGraphicOverlay = findViewById(R.id.graphicOverlay);
 
         boolean autoFocus = true;
@@ -163,22 +166,11 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         // graphics for each text block on screen.  The factory is used by the multi-processor to
         // create a separate tracker instance for each text block.
         TextRecognizer textRecognizer = new TextRecognizer.Builder(context).build();
-        textRecognizer.setProcessor(new OcrDetectorProcessor(mGraphicOverlay));
+        detectorProcessor = new OcrDetectorProcessor(mGraphicOverlay);
+        textRecognizer.setProcessor(detectorProcessor);
 
-        if (!textRecognizer.isOperational()) {
-            // Note: The first time that an app using a Vision API is installed on a
-            // device, GMS will download a native libraries to the device in order to do detection.
-            // Usually this completes before the app is run for the first time.  But if that
-            // download has not yet completed, then the above call will not detect any text,
-            // barcodes, or faces.
-            //
-            // isOperational() can be used to check if the required native libraries are currently
-            // available.  The detectors will automatically become operational once the library
-            // downloads complete on device.
+        if (!textRecognizer.isOperational()) { // check if dependencies are available
             Log.w(TAG, "Detector dependencies are not yet available.");
-
-            // Check for low storage.  If there is low storage, the native library will not be
-            // downloaded, so detection will not become operational.
             IntentFilter lowstorageFilter = new IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW);
             boolean hasLowStorage = registerReceiver(null, lowstorageFilter) != null;
 
@@ -188,8 +180,6 @@ public final class OcrCaptureActivity extends AppCompatActivity {
             }
         }
 
-        // Creates and starts the camera.  Note that this uses a higher resolution in comparison
-        // to other detection examples to enable the text recognizer to detect small pieces of text.
         mCameraSource =
                 new CameraSource.Builder(getApplicationContext(), textRecognizer)
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
@@ -198,6 +188,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                 .setFlashMode(useFlash ? Camera.Parameters.FLASH_MODE_TORCH : null)
                 .setFocusMode(autoFocus ? Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE : null)
                 .build();
+        safeToTakePicture = true;
     }
 
     /**
@@ -238,6 +229,12 @@ public final class OcrCaptureActivity extends AppCompatActivity {
             Intent returnIntent = new Intent(); // prompt main activity to update captures
             setResult(Activity.RESULT_OK,returnIntent);
             finish();
+        } else {
+            if (photo.exists()) {
+                if (!photo.delete()) {
+                    Log.d(TAG, "Could not delete cached photo");
+                }
+            }
         }
     }
 
@@ -308,6 +305,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
         if (mCameraSource != null) {
             try {
                 mPreview.start(mCameraSource, mGraphicOverlay);
+                safeToTakePicture = true;
             } catch (IOException e) {
                 Snackbar.make(findViewById(R.id.coordinatorLayout), "Unable to start camera: "
                         + e.getMessage(), Snackbar.LENGTH_LONG);
@@ -318,7 +316,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     }
 
     /**
-     * onTap is called to speak the tapped TextBlock, if any, out loud.
+     * Capture and temporarily cache photo and detected text.
      *
      * @param rawX - the raw position of the tap
      * @param rawY - the raw position of the tap.
@@ -326,15 +324,14 @@ public final class OcrCaptureActivity extends AppCompatActivity {
      */
     private boolean onTap(float rawX, float rawY) {
         OcrGraphic graphic = mGraphicOverlay.getGraphicAtLocation(rawX, rawY);
-        TextBlock text = null;
+        // TextBlock text = null;
         if (graphic != null) {
-            text = graphic.getTextBlock();
-            if (text != null && text.getValue() != null) {
-                final String s = text.getValue();
+            final String s = detectorProcessor.getTextDetected(); // graphic.getTextBlock();
+            if (s != null) { // text != null && text.getValue() != null) {
+                // final String s = text.getValue().replace("\n"," ");
                 CameraSource.ShutterCallback sc = new CameraSource.ShutterCallback() {
                     @Override
                     public void onShutter() {
-                        // TODO: play sound
                         new MediaActionSound().play(MediaActionSound.SHUTTER_CLICK);
                     }
                 };
@@ -342,7 +339,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                     @Override
                     public void onPictureTaken(byte[] data) {
                         try {
-                            File photo = getOutputMediaFile();
+                            photo = getOutputMediaFile();
                             FileOutputStream fos = new FileOutputStream(photo);
                             fos.write(data);
                             fos.close();
@@ -359,12 +356,16 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                             Snackbar.make(findViewById(R.id.coordinatorLayout), "Error accessing file: "
                                     + e.getMessage(), Snackbar.LENGTH_LONG);
                         }
+                        safeToTakePicture = true;
                     }
                 };
-                mCameraSource.takePicture(sc, pc);
+                if (safeToTakePicture) {
+                    mCameraSource.takePicture(sc, pc);
+                    safeToTakePicture = false;
+                }
             }
         }
-        return text != null;
+        return graphic != null; // text != null;
     }
 
     // get cache directory to temporarily store photo

@@ -2,10 +2,14 @@
 <resources>
     <string name="ok">OK</string>
     <string name="select">Select</string>
+
     <string name="current_capture">Current capture</string>
+    <string name="subhead_photo">Photo</string>
+    <string name="subhead_text">Text</string>
     <string name="save">Save capture</string>
     <string name="share_text">Share text</string>
     <string name="share_photo">Share photo</string>
+
     <string name="saved">Capture saved</string>
     <string name="no_data">No captures saved</string>
     <string name="delete">%1$d captures deleted</string>

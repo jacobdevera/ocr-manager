@@ -18,6 +18,7 @@ package com.gjdevera.ocrreader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 
 import com.gjdevera.ocrreader.ui.camera.GraphicOverlay;
@@ -35,6 +36,7 @@ public class OcrGraphic extends GraphicOverlay.Graphic {
     private int mId;
 
     private static final int TEXT_COLOR = Color.WHITE;
+    private static final float SCALAR = (float) 0.7;
 
     private static Paint sRectPaint;
     private static Paint sTextPaint;
@@ -104,14 +106,19 @@ public class OcrGraphic extends GraphicOverlay.Graphic {
         // Break the text into multiple lines (and lines into words)
         // and draw each one according to its own bounding box.
         List<? extends Text> textComponents = mText.getComponents();
+        sTextPaint.setTextSize((rect.height() / textComponents.size()) * SCALAR);
         for(Text currentText : textComponents) {
             List<? extends Text> lineComponents = currentText.getComponents();
-            for (Text word : lineComponents) {
+            /*for (Text word : lineComponents) {
                 float left = translateX(word.getBoundingBox().left);
                 float bottom = translateY(word.getBoundingBox().bottom);
                 sTextPaint.setTextSize(word.getBoundingBox().height());
                 canvas.drawText(word.getValue(), left, bottom, sTextPaint);
-            }
+            }*/
+            Rect boundingBox = currentText.getBoundingBox();
+            float left = translateX(boundingBox.left);
+            float bottom = translateY(boundingBox.bottom);
+            canvas.drawText(currentText.getValue(), left, bottom, sTextPaint);
         }
     }
 
