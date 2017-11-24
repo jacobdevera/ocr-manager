@@ -1,9 +1,11 @@
 package com.gjdevera.ocrreader;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.drawable.ColorDrawable;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -58,10 +60,14 @@ public class CaptureViewAdapter extends RecyclerView.Adapter<CaptureViewAdapter.
         tv.setText(getDate(capture.getCreated()));
 
         Glide.with(context).load(new File(capture.getPath())).into(iv);
-        vh.rootView.setForeground(
+
+        TypedValue typedValue = new TypedValue();
+        TypedArray a = context.obtainStyledAttributes(typedValue.data, new int[] { R.attr.colorAccent });
+        int color = a.getColor(0, 0);
+        a.recycle();
+        vh.rootView.setBackgroundColor(
                 selectedIds.contains(position) ?
-                        new ColorDrawable(ContextCompat.getColor(context,R.color.colorControlActivated))
-                        : new ColorDrawable(ContextCompat.getColor(context,android.R.color.transparent)));
+                        color : context.getResources().getColor(android.R.color.transparent));
     }
 
     public void setSelectedIds(List<Integer> selectedIds) {
