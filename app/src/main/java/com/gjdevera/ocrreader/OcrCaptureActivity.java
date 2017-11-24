@@ -29,6 +29,7 @@ import android.hardware.Camera;
 import android.media.MediaActionSound;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -78,6 +79,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
     private File photo;
     private OcrDetectorProcessor detectorProcessor;
     private Boolean safeToTakePicture;
+    private String capturedText;
 
     // Helper objects for detecting taps and pinches.
     private ScaleGestureDetector scaleGestureDetector;
@@ -108,6 +110,14 @@ public final class OcrCaptureActivity extends AppCompatActivity {
 
         gestureDetector = new GestureDetector(this, new CaptureGestureListener());
         scaleGestureDetector = new ScaleGestureDetector(this, new ScaleListener());
+
+        FloatingActionButton fab = findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                capture(true, (float) 0, (float) 0);
+            }
+        });
     }
 
     /**
@@ -136,7 +146,7 @@ public final class OcrCaptureActivity extends AppCompatActivity {
             }
         };
 
-        Snackbar.make(mGraphicOverlay, R.string.permission_camera_rationale,
+        Snackbar.make(findViewById(R.id.topLayout), R.string.permission_camera_rationale,
                 Snackbar.LENGTH_INDEFINITE)
                 .setAction(R.string.ok, listener)
                 .show();
@@ -175,8 +185,9 @@ public final class OcrCaptureActivity extends AppCompatActivity {
             boolean hasLowStorage = registerReceiver(null, lowstorageFilter) != null;
 
             if (hasLowStorage) {
-                Snackbar.make(findViewById(R.id.coordinatorLayout),
-                        getString(R.string.low_storage_error), Snackbar.LENGTH_LONG);
+                Snackbar.make(findViewById(R.id.topLayout), getString(R.string.error_low_storage),
+                        Snackbar.LENGTH_LONG)
+                        .show();
             }
         }
 
@@ -307,8 +318,8 @@ public final class OcrCaptureActivity extends AppCompatActivity {
                 mPreview.start(mCameraSource, mGraphicOverlay);
                 safeToTakePicture = true;
             } catch (IOException e) {
-                Snackbar.make(findViewById(R.id.coordinatorLayout), "Unable to start camera: "
-                        + e.getMessage(), Snackbar.LENGTH_LONG);
+                Snackbar.make(findViewById(R.id.topLayout), "Unable to start camera: "
+                        + e.getMessage(), Snackbar.LENGTH_LONG).show();
                 mCameraSource.release();
                 mCameraSource = null;
             }
@@ -323,52 +334,66 @@ public final class OcrCaptureActivity extends AppCompatActivity {
      * @return true if the tap was on a TextBlock
      */
     private boolean onTap(float rawX, float rawY) {
-        OcrGraphic graphic = mGraphicOverlay.getGraphicAtLocation(rawX, rawY);
-        // TextBlock text = null;
-        if (graphic != null) {
-            final String s = detectorProcessor.getTextDetected(); // graphic.getTextBlock();
-            if (s != null) { // text != null && text.getValue() != null) {
-                // final String s = text.getValue().replace("\n"," ");
-                CameraSource.ShutterCallback sc = new CameraSource.ShutterCallback() {
-                    @Override
-                    public void onShutter() {
-                        new MediaActionSound().play(MediaActionSound.SHUTTER_CLICK);
-                    }
-                };
-                CameraSource.PictureCallback pc = new CameraSource.PictureCallback() {
-                    @Override
-                    public void onPictureTaken(byte[] data) {
-                        try {
-                            photo = getOutputMediaFile();
-                            FileOutputStream fos = new FileOutputStream(photo);
-                            fos.write(data);
-                            fos.close();
-                            startActivityForResult(new Intent()
-                                    .setClass(getApplicationContext(), CaptureActivity.class)
-                                    .putExtra("text", s)
-                                    .putExtra("newCapture", true)
-                                    .putExtra("path", photo.getAbsolutePath()), 1
-                            );
-                        } catch (FileNotFoundException e) {
-                            Snackbar.make(findViewById(R.id.coordinatorLayout), "File not found: "
-                                    + e.getMessage(), Snackbar.LENGTH_LONG);
-                        } catch (IOException e) {
-                            Snackbar.make(findViewById(R.id.coordinatorLayout), "Error accessing file: "
-                                    + e.getMessage(), Snackbar.LENGTH_LONG);
-                        }
-                        safeToTakePicture = true;
-                    }
-                };
-                if (safeToTakePicture) {
-                    mCameraSource.takePicture(sc, pc);
-                    safeToTakePicture = false;
+        return capture(false, rawX, rawY);
+    }
+
+    // Captures and temporarily caches photo and detected text.
+    // Returns whether captured text is not null.
+    private boolean capture(boolean all, float rawX, float rawY) {
+        if (all) { // want all text detected by the camera
+            capturedText = detectorProcessor.getTextDetected();
+        } else {
+            OcrGraphic graphic = mGraphicOverlay.getGraphicAtLocation(rawX, rawY);
+            if (graphic != null) {
+                TextBlock text = graphic.getTextBlock();
+                if (text != null && text.getValue() != null) {
+                    capturedText = text.getValue().replace("\n", " ");
                 }
             }
         }
-        return graphic != null; // text != null;
+        if (capturedText != null && capturedText.length() != 0) {
+            CameraSource.ShutterCallback sc = new CameraSource.ShutterCallback() {
+                @Override
+                public void onShutter() {
+                    new MediaActionSound().play(MediaActionSound.SHUTTER_CLICK);
+                }
+            };
+            CameraSource.PictureCallback pc = new CameraSource.PictureCallback() {
+                @Override
+                public void onPictureTaken(byte[] data) {
+                    try {
+                        photo = getOutputMediaFile();
+                        FileOutputStream fos = new FileOutputStream(photo);
+                        fos.write(data);
+                        fos.close();
+                        startActivityForResult(new Intent()
+                                .setClass(getApplicationContext(), CaptureActivity.class)
+                                .putExtra("text", capturedText)
+                                .putExtra("newCapture", true)
+                                .putExtra("path", photo.getAbsolutePath()), 1
+                        );
+                    } catch (FileNotFoundException e) {
+                        Snackbar.make(findViewById(R.id.topLayout), "File not found: "
+                                + e.getMessage(), Snackbar.LENGTH_LONG).show();
+                    } catch (IOException e) {
+                        Snackbar.make(findViewById(R.id.topLayout), "Error accessing file: "
+                                + e.getMessage(), Snackbar.LENGTH_LONG).show();
+                    }
+                    safeToTakePicture = true;
+                }
+            };
+            if (safeToTakePicture) {
+                mCameraSource.takePicture(sc, pc);
+                safeToTakePicture = false;
+            }
+        } else {
+            Snackbar.make(findViewById(R.id.topLayout), getString(R.string.error_no_detection),
+                    Snackbar.LENGTH_LONG).show();
+        }
+        return capturedText != null;
     }
 
-    // get cache directory to temporarily store photo
+    // Get cache directory to store photo
     private File getOutputMediaFile(){
         File mediaStorageDir = new File(getApplicationContext().getExternalCacheDir(), "Scans");
         if (!mediaStorageDir.exists()) {

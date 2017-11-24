@@ -226,10 +226,10 @@ public class MainActivity extends AppCompatActivity implements ActionMode.Callba
                     @Override
                     public void onDismissed(Snackbar snackbar, int dismissType) {
                         super.onDismissed(snackbar, dismissType);
-                        for (String path : pathList) {
-                            new File(path).delete();
-                        }
-                        if (dismissType != DISMISS_EVENT_ACTION) {
+                        if (dismissType != DISMISS_EVENT_ACTION && db.isOpen()) {
+                            for (String path : pathList) {
+                                new File(path).delete();
+                            }
                             db.delete(CaptureContract.CaptureEntry.TABLE, selection, selectionArgs);
                             db.close();
                         }

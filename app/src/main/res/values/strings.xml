@@ -14,9 +14,12 @@
     <string name="no_data">No captures saved</string>
     <string name="delete">%1$d captures deleted</string>
     <string name="undo">Undo</string>
+
     <string name="permission_camera_rationale">Access to the camera is needed for detection</string>
     <string name="no_camera_permission">This application cannot run because it does not have the camera permission.  The application will now exit.</string>
-    <string name="low_storage_error">OCR dependencies cannot be downloaded due to low device storage</string>
+    <string name="error_low_storage">OCR dependencies cannot be downloaded due to low device storage</string>
+    <string name="error_no_detection">Please wait until the camera detects text.</string>
+
     <string name="ocr_header">Click &quot;Detect Text&quot; to detect text</string>
     <string name="read_text">Detect Text</string>
     <string name="auto_focus">Auto Focus</string>

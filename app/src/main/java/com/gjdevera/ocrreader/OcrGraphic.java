@@ -108,13 +108,6 @@ public class OcrGraphic extends GraphicOverlay.Graphic {
         List<? extends Text> textComponents = mText.getComponents();
         sTextPaint.setTextSize((rect.height() / textComponents.size()) * SCALAR);
         for(Text currentText : textComponents) {
-            List<? extends Text> lineComponents = currentText.getComponents();
-            /*for (Text word : lineComponents) {
-                float left = translateX(word.getBoundingBox().left);
-                float bottom = translateY(word.getBoundingBox().bottom);
-                sTextPaint.setTextSize(word.getBoundingBox().height());
-                canvas.drawText(word.getValue(), left, bottom, sTextPaint);
-            }*/
             Rect boundingBox = currentText.getBoundingBox();
             float left = translateX(boundingBox.left);
             float bottom = translateY(boundingBox.bottom);
