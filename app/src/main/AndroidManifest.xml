@@ -11,7 +11,7 @@
         android:allowBackup="true"
         android:fullBackupContent="false"
         android:hardwareAccelerated="true"
-        android:icon="@drawable/icon"
+        android:icon="@mipmap/ic_launcher"
         android:label="OCR Manager"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppTheme">
